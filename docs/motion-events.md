@@ -76,7 +76,17 @@ battery cameras alike. `CRY_ALARM_TYPES = {7}` ("Baby cry") goes to a
 separate `on_cry` callback instead and drives the **Crying** binary sensor
 (on for `CRY_HOLD_S` = 60 s after the latest alert; alerts have no "end").
 Other alarm types (Visitor, Noise, Package, etc.) are classified by
-`motion_event.py` but currently routed only to logs / future event sensors.
+`motion_event.py` and are not routed to an entity.
+
+### `cloudplus_alarm` bus event
+
+Every parsed alarm (MQTT or polled), of any type, is also fired on the HA
+event bus as `cloudplus_alarm` with `device_id`, `license_id`, `type`,
+`type_name`, `is_motion` and `is_doorbell` (`type` in
+`DOORBELL_ALARM_TYPES` = {3 Visitor, 9 Call}). The hook is
+`MotionEventListener.on_any_event`, set once per account listener by the
+coordinator and marshalled onto the loop with `call_soon_threadsafe`.
+This is how doorbell presses (Intelbras Allo w3/w5) reach automations.
 
 ## Fallback: cloud event polling
 
