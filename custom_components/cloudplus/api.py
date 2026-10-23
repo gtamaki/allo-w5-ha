@@ -269,6 +269,7 @@ class MeariApiClient:
 
         # OpenAPI / MQTT
         self.openapi_server: str = ""
+        self.legacy_client_id: str = ""
         self.platform_domain: str = ""
         self.access_id: str = ""
         self.access_key: str = ""
@@ -586,6 +587,10 @@ class MeariApiClient:
                 result = data["result"]
                 self.user_id = result["userID"]
                 self.client_id = str(result.get("clientId") or "").strip()
+                # Legacy ("ppstrong") MQTT push channel identity; note the capital D.
+                self.legacy_client_id = str(
+                    result.get("clientID") or result.get("clientId") or ""
+                ).strip()
                 self.user_token = result["userToken"]
                 self._apply_login_iot_config(result)
                 return

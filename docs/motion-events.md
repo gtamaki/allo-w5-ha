@@ -88,6 +88,20 @@ event bus as `cloudplus_alarm` with `device_id`, `license_id`, `type`,
 coordinator and marshalled onto the loop with `call_soon_threadsafe`.
 This is how doorbell presses (Intelbras Allo w3/w5) reach automations.
 
+### Legacy push channel (older PPCS devices)
+
+Older devices (legacy PPCS transport, OpenAPI IoT config returns no codes,
+e.g. Intelbras Allo w5) do not publish on `$bsssvr/iot/...`. The official
+app also connects to `mqtts.meari.com.cn:8883` (private CA bundled as
+`meari_legacy_ca.pem`, no hostname check) and subscribes to
+`meari/app/<clientID>` (login result `clientID`, capital D). Client id
+`<clientID>-/<4 digits>`, username `<clientID>-<epoch ms>-/<same digits>`,
+password `base64(HMAC-SHA1(username, userToken))`. See
+[legacy_mqtt.py](../custom_components/cloudplus/coordinator/legacy_mqtt.py).
+`MotionEventListener` starts it alongside the main broker and feeds each
+payload into `_handle_payload`; every payload is also logged at INFO
+(`Legacy MQTT message on ...`) while its alarm format is still being mapped.
+
 ## Fallback: cloud event polling
 
 Because the MQTT session is regularly evicted whenever the account is also
