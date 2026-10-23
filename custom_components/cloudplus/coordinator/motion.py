@@ -16,7 +16,6 @@ from ..api import MeariApiClient
 from ..const import CRY_ALARM_TYPES
 from ..motion_event import parse_motion_event
 from .backoff import RetryBackoff
-from .legacy_mqtt import LegacyMqttListener
 
 _LOGGER = logging.getLogger(__name__)
 ALARM_POLL_INTERVAL = 15.0
@@ -131,7 +130,6 @@ class MotionEventListener:
         self._mqtt_connect_warned = False
         # Optional account-wide hook called for every parsed alarm (any type).
         self.on_any_event: Callable[[dict[str, Any]], None] | None = None
-        self._legacy: LegacyMqttListener | None = None
 
     @property
     def has_callbacks(self) -> bool:
@@ -164,7 +162,6 @@ class MotionEventListener:
 
     def start(self) -> None:
         self._start_alarm_poll()
-        self._start_legacy()
         if self._client is not None:
             return
         if not self._api.mqtt_host:
@@ -241,10 +238,6 @@ class MotionEventListener:
 
     def stop(self) -> None:
         self._stop_alarm_poll()
-        legacy = self._legacy
-        self._legacy = None
-        if legacy is not None:
-            legacy.stop()
         client = self._client
         self._client = None
         if client is None:
@@ -254,20 +247,6 @@ class MotionEventListener:
             client.disconnect()
         except OSError:
             pass
-
-    def _start_legacy(self) -> None:
-        """Also listen on the legacy broker used by older (PPCS) devices."""
-        if self._legacy is not None:
-            return
-        client_id = str(getattr(self._api, "legacy_client_id", "") or "").strip()
-        token = str(self._api.user_token or "").strip()
-        if not client_id or not token:
-            _LOGGER.debug("Legacy MQTT listener not started: no clientID/token")
-            return
-        self._legacy = LegacyMqttListener(
-            client_id, token, lambda _topic, payload: self._handle_payload(payload)
-        )
-        self._legacy.start()
 
     def _start_alarm_poll(self) -> None:
         if self._poll_thread is not None and self._poll_thread.is_alive():
