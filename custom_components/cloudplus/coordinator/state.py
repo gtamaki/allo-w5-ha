@@ -273,12 +273,19 @@ class CoordinatorStateMixin:
     def prefetch_lamp(self, api: MeariApiClient) -> None:
         self._api = api
         if not api.openapi_server:
+            _LOGGER.info("Status prefetch skipped for %s: no OpenAPI server", self._sn_num)
             return
         try:
             iot = api.get_device_iot_config(self._sn_num)
         except (OSError, RuntimeError, ValueError, KeyError) as exc:
-            _LOGGER.debug("Lamp/status prefetch failed for %s: %s", self._sn_num, exc)
+            _LOGGER.info("Lamp/status prefetch failed for %s: %s", self._sn_num, exc)
             return
+        _LOGGER.info(
+            "Status prefetch for %s returned %d IoT codes: %s",
+            self._sn_num,
+            len(iot or {}),
+            sorted(iot or {}, key=str)[:80],
+        )
         changed = self._apply_iot_values(iot)
         changed = self._apply_battery_info(iot) or changed
         changed = self._apply_video_encryption_info(iot) or changed

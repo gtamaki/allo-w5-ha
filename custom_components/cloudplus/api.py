@@ -488,6 +488,15 @@ class MeariApiClient:
             self._do_login()
             self._get_iot_config()
             self._get_devices()
+            _LOGGER.info(
+                "Meari endpoints (%s): api=%s openapi=%s platform=%s mqtt=%s openapi_creds=%s",
+                self.app_profile,
+                self.api_server or "-",
+                self.openapi_server or "-",
+                self.platform_domain or "-",
+                self.mqtt_host or "-",
+                bool(self.access_id and self.access_key),
+            )
 
     def _redirect(self) -> None:
         ts = int(time.time() * 1000)
