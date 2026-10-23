@@ -1,0 +1,16 @@
+# Home Assistant automation: republish every Allo w5 alarm (motion, doorbell, ...) to Mosquitto.
+# Topics: allo/w5/motion, allo/w5/doorbell, allo/w5/event (other types)
+alias: Doorbell - Allo w5 alarm to MQTT
+description: Republishes cloudplus_alarm bus events from the Intelbras Allo w5 to MQTT
+mode: queued
+triggers:
+  - trigger: event
+    event_type: cloudplus_alarm
+actions:
+  - action: mqtt.publish
+    data:
+      topic: >-
+        allo/w5/{{ 'doorbell' if trigger.event.data.is_doorbell
+        else ('motion' if trigger.event.data.is_motion else 'event') }}
+      payload: "{{ trigger.event.data | tojson }}"
+      qos: 1

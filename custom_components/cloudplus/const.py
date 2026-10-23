@@ -1,0 +1,124 @@
+"""Constants for the CloudEdge / Meari integration."""
+
+DOMAIN = "cloudplus"
+
+CONF_EMAIL = "email"
+CONF_PASSWORD = "password"
+CONF_COUNTRY_CODE = "country_code"
+CONF_PHONE_CODE = "phone_code"
+CONF_APP_PROFILE = "app_profile"
+CONF_DEVICE_ID = "device_id"
+CONF_SN_NUM = "sn_num"
+CONF_DEVICE_NAME = "device_name"
+CONF_HOST_KEY = "host_key"
+CONF_MOTION_TIMEOUT = "motion_timeout"
+CONF_MOTION_WAKE = "motion_wake"
+CONF_STREAM_HOST_MODE = "stream_host_mode"
+CONF_VIDEO_PASSWORD = "video_password"
+CONF_STREAM_QUALITY = "stream_quality"
+CONF_KNOWN_CAMERAS = "known_cameras"
+CONF_DEVICE = "device"
+
+# One account config entry holds one "camera" subentry per camera.
+SUBENTRY_TYPE_CAMERA = "camera"
+# Per-camera keys stored in a camera subentry's data (legacy camera entries
+# kept these in their options).
+CAMERA_SETTING_KEYS = (
+    CONF_VIDEO_PASSWORD,
+    CONF_STREAM_QUALITY,
+    CONF_STREAM_HOST_MODE,
+    CONF_MOTION_WAKE,
+    CONF_MOTION_TIMEOUT,
+)
+
+DEFAULT_MOTION_TIMEOUT = 120
+MOTION_TIMEOUT_MIN = 10
+MOTION_TIMEOUT_MAX = 600
+# "local" binds the stream to loopback (HA only); "ip"/"docker" expose it on the LAN.
+STREAM_HOST_MODES = ("local", "ip", "docker")
+DEFAULT_STREAM_HOST_MODE = "local"
+DEFAULT_COUNTRY_CODE = "FR"
+DEFAULT_PHONE_CODE = "33"
+DEFAULT_APP_PROFILE = "cloudedge"
+APP_PROFILE_NAMES = {
+    "cloudedge": "CloudEdge",
+    "anran": "ANRAN",
+    "boifun": "BoifunCam",
+    "cloudplus": "CloudPlus / CloudHome",
+    "iegeek": "ieGeek",
+    "arenti": "Arenti",
+    "intelbras": "Intelbras Allo",
+}
+APP_PROFILES = list(APP_PROFILE_NAMES)
+
+# CloudEdge / Meari API
+PARTNER_ID = "77"
+TTID = "a"
+SOURCE_APP = "77"
+APP_VER = "5.9.2"
+APP_VER_CODE = "1024"
+PHONE_TYPE = "a"
+
+DEFAULT_CA_KEY = "bc29be30292a4309877807e101afbd51"
+DEFAULT_CA_SECRET = "35a69fd1-6527-4566-b190-921f9a651488"
+
+DES_KEY = b"123456781234567812345678"
+DES_IV = b"01234567"
+
+REDIRECT_URL = "https://apis.cloudedge360.com"
+
+# IoT Model codes for battery info
+IOT_CODE_POWER_TYPE = "153"
+IOT_CODE_BATTERY_PERCENT = "154"
+IOT_CODE_BATTERY_REMAINING = "155"
+IOT_CODE_CHARGE_STATUS = "156"
+IOT_CODE_WIFI_SIGNAL = "1007"
+BATTERY_CODES = "153,154,155,156,1007"
+
+# IoT Model codes for device features
+IOT_CODE_LAMP = "167"
+IOT_CODE_VIDEO_ENCRYPTION = "216"
+
+# PTZ IoT codes
+IOT_CODE_PTZ_START = "807"
+IOT_CODE_PTZ_STOP = "808"
+IOT_CODE_PTZ2_START = "841"
+IOT_CODE_PTZ2_STOP = "842"
+
+# PTZ direction → (pan_speed, tilt_speed) mapping
+PTZ_DIRECTIONS: dict[str, tuple[int, int]] = {
+    "left": (-80, 0),
+    "right": (80, 0),
+    "up": (0, 20),
+    "down": (0, -20),
+}
+
+# Motion-related alarm types (from motion_detector.py)
+MOTION_ALARM_TYPES = {1, 2, 11, 20}
+# "Baby cry" alerts drive the Crying binary sensor, not Motion.
+CRY_ALARM_TYPES = {7}
+# Doorbell button press ("Visitor" / "Call") on Meari-based doorbells (e.g. Intelbras Allo w3/w5).
+DOORBELL_ALARM_TYPES = {3, 9}
+# Fired on the HA bus for every Meari alarm (motion, doorbell, noise, ...).
+EVENT_ALARM = "cloudplus_alarm"
+
+ALARM_TYPE_NAMES = {
+    1: "PIR",
+    2: "Motion",
+    3: "Visitor",
+    6: "Noise",
+    7: "Baby cry",
+    8: "Face",
+    9: "Call",
+    10: "Tamper",
+    11: "Human body",
+    12: "Face detected",
+    14: "Dog bark",
+    17: "Cat",
+    18: "Pet",
+    19: "Package",
+    20: "Person",
+    21: "SD card removed",
+    39: "Fire",
+    41: "Cat meow",
+}

@@ -1,0 +1,144 @@
+name: Release Tags
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: Release type
+        required: true
+        type: choice
+        options:
+          - prerelease
+          - release
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  tag-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Create tag and release from manifest version
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TYPE: ${{ inputs.release_type }}
+        run: |
+          set -euo pipefail
+
+          case "${RELEASE_TYPE}" in
+            prerelease|release) ;;
+            *)
+              echo "Unsupported release type: ${RELEASE_TYPE}"
+              exit 1
+              ;;
+          esac
+
+          manifest_path="custom_components/cloudplus/manifest.json"
+          if [[ ! -f "${manifest_path}" ]]; then
+            echo "Missing manifest: ${manifest_path}"
+            exit 1
+          fi
+
+          base_version="$(jq -r '.version' "${manifest_path}")"
+          if [[ -z "${base_version}" || "${base_version}" == "null" ]]; then
+            echo "Manifest version is missing or invalid"
+            exit 1
+          fi
+
+          base_version="${base_version#v}"
+          if [[ ! "${base_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Manifest version must match X.Y.Z, got: ${base_version}"
+            exit 1
+          fi
+
+          git fetch --force --tags origin
+          head_sha="$(git rev-parse HEAD)"
+          stable_tag="v${base_version}"
+          tag_name="${stable_tag}"
+          previous_tag=""
+
+          if [[ "${RELEASE_TYPE}" == "prerelease" ]]; then
+            if git rev-parse -q --verify "refs/tags/${stable_tag}" >/dev/null; then
+              echo "Stable tag already exists: ${stable_tag}"
+              echo "Bump the manifest version before creating more prereleases."
+              exit 1
+            fi
+
+            latest_num=0
+            while IFS= read -r existing_tag; do
+              [[ -z "${existing_tag}" ]] && continue
+              num="${existing_tag#v${base_version}-dev.}"
+              if [[ "${num}" =~ ^[0-9]+$ ]] && (( num > latest_num )); then
+                latest_num="${num}"
+              fi
+            done < <(git tag -l "v${base_version}-dev.*")
+
+            if (( latest_num > 0 )); then
+              previous_tag="v${base_version}-dev.${latest_num}"
+            fi
+
+            next_num=$((latest_num + 1))
+            tag_name="v${base_version}-dev.${next_num}"
+          else
+            while IFS= read -r existing_tag; do
+              if [[ "${existing_tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                previous_tag="${existing_tag}"
+                break
+              fi
+            done < <(git tag -l 'v*' --sort=-version:refname)
+          fi
+
+          if git rev-parse -q --verify "refs/tags/${tag_name}" >/dev/null; then
+            echo "Tag already exists: ${tag_name}"
+            exit 1
+          fi
+
+          if [[ -n "${previous_tag}" ]]; then
+            commit_range="${previous_tag}..${head_sha}"
+          else
+            root_commit="$(git rev-list --max-parents=0 "${head_sha}" | tail -n 1)"
+            commit_range="${root_commit}..${head_sha}"
+          fi
+
+          commit_lines="$(git log --no-merges --pretty=format:'- %h %s (%an)' "${commit_range}" || true)"
+          if [[ -z "${commit_lines}" ]]; then
+            commit_lines="- $(git rev-parse --short "${head_sha}")"
+          fi
+
+          notes_file="$(mktemp)"
+          trap 'rm -f "${notes_file}"' EXIT
+          {
+            echo "Commits:"
+            echo "${commit_lines}"
+          } > "${notes_file}"
+
+          git tag "${tag_name}" "${head_sha}"
+          git push origin "refs/tags/${tag_name}"
+
+          release_args=(
+            release
+            create
+            "${tag_name}"
+            --target "${head_sha}"
+            --title "${tag_name}"
+            --notes-file "${notes_file}"
+          )
+
+          if [[ "${RELEASE_TYPE}" == "prerelease" ]]; then
+            release_args+=(--prerelease)
+          fi
+
+          gh "${release_args[@]}"
+          echo "Created ${RELEASE_TYPE}: ${tag_name}"
